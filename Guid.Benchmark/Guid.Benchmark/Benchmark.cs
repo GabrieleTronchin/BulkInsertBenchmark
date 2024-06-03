@@ -21,6 +21,18 @@ public class Benchmark
 
     }
 
+    // https://pritompurkayasta.medium.com/sql-bulk-insert-c-49f708148b5f
+
+    // https://timdeschryver.dev/blog/faster-sql-bulk-inserts-with-csharp#results
+
+    //    var cmdText = customers.Aggregate(
+    //    new StringBuilder(),
+    //    (sb, customer) => sb.AppendLine(@$"
+    //        insert into dbo.Customers (Id, FirstName, LastName, Street, City, State, PhoneNumber, EmailAddress)
+    //        values('{customer.Id}', '{customer.FirstName}', '{customer.LastName}', '{customer.Street}', '{customer.City}', '{customer.State}', '{customer.PhoneNumber}', '{customer.EmailAddress}')")
+    //);
+
+
     [Benchmark]
     public async Task DapperCustomInsert()
     {
