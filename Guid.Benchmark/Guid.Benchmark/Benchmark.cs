@@ -1,9 +1,9 @@
 ﻿using BenchmarkDotNet.Attributes;
 using Dapper;
 using MassTransit;
+using System.Data;
 using System.Data.SqlClient;
 using System.Text;
-
 
 namespace Guid.Benchmark;
 
@@ -12,40 +12,32 @@ public class Benchmark
 
     public async Task Execute()
     {
-        using var connection = new SqlConnection("Server=127.0.0.1,1433;Database=TestDb;User Id=sa;Password=Password12345;TrustServerCertificate=True");
+       
+        await DapperCustomInsert();
 
-        await SeedFastTable(connection);
+        await DapperBulkInsert();
 
-        await SeedSlowTable(connection);
+        await BulkCopyInsert();
 
-        await SeedIdentityTable(connection);
-
-        var slow = CountSlow();
-
-        Console.WriteLine($"Slow = {slow}");
-
-        var fast = CountFast();
-
-        Console.WriteLine($"Slow = {fast}");
     }
 
-    private async Task SeedFastTable(SqlConnection connection)
+    [Benchmark]
+    public async Task DapperCustomInsert()
     {
-       
-
-        for (int e = 0; e < 1000; e++)
+        using var connection = new SqlConnection("Server=127.0.0.1,1433;Database=TestDb;User Id=sa;Password=Password12345;TrustServerCertificate=True");
+        for (int e = 0; e < 1; e++)
         {
 
             StringBuilder stringBuilder = new();
 
-            stringBuilder.AppendLine(@"INSERT INTO GuidTableFast (id, Description)
+            stringBuilder.AppendLine(@"INSERT INTO DapperCustomInsert (id, Description)
                     VALUES ");
 
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 10; i++)
             {
                 stringBuilder.Append($"('{NewId.NextSequentialGuid()}', 'Test Desc {e + i}')");
 
-                if (i < 999) stringBuilder.Append(", ");
+                if (i < 9) stringBuilder.Append(", ");
             }
             stringBuilder.Append(';');
 
@@ -56,71 +48,47 @@ public class Benchmark
 
     }
 
-    private async Task SeedSlowTable(SqlConnection connection)
+    record Test(System.Guid id, string description);
+
+    [Benchmark]
+    public async Task DapperBulkInsert()
     {
+        using var connection = new SqlConnection("Server=127.0.0.1,1433;Database=TestDb;User Id=sa;Password=Password12345;TrustServerCertificate=True");
+        var list2Insert = new List<Test>();
 
-
-        for (int e = 0; e < 1000; e++)
+        for (int i = 0; i < 10; i++)
         {
-            StringBuilder stringBuilder = new();
-
-            stringBuilder.AppendLine(@"INSERT INTO GuidTableSlow (id, Description)
-                    VALUES ");
-
-            for (int i = 0; i < 1000; i++)
-            {
-                stringBuilder.Append($"('{System.Guid.NewGuid()}', 'Test Desc {e+i}')");
-
-                if (i < 999) stringBuilder.Append(", ");
-            }
-            stringBuilder.Append(';');
-
-            await connection.ExecuteAsync(stringBuilder.ToString());
-            stringBuilder.Clear();
-
+            list2Insert.Add(new Test(System.Guid.NewGuid(), $"Test Desc {i}"));
         }
-    }
 
-
-    private async Task SeedIdentityTable(SqlConnection connection)
-    {
-
-
-        for (int e = 0; e < 1000; e++)
-        {
-            StringBuilder stringBuilder = new();
-
-            stringBuilder.AppendLine(@"INSERT INTO [IdentityTable] (Description)
-                    VALUES ");
-
-            for (int i = 0; i < 1000; i++)
-            {
-                stringBuilder.Append($"('Test Desc {e + i}')");
-
-                if (i < 999) stringBuilder.Append(", ");
-            }
-            stringBuilder.Append(';');
-
-            await connection.ExecuteAsync(stringBuilder.ToString());
-            stringBuilder.Clear();
-
-        }
+        await connection.ExecuteAsync("INSERT INTO DapperBulkInsert (id, Description) VALUES (@id, @description)", list2Insert);
     }
 
     [Benchmark]
-    public int CountSlow()
+    public async Task BulkCopyInsert()
     {
         using var connection = new SqlConnection("Server=127.0.0.1,1433;Database=TestDb;User Id=sa;Password=Password12345;TrustServerCertificate=True");
-        var rows = connection.Query("SELECT * FROM GuidTableSlow").ToList();
-        return rows.Count();
+        await connection.OpenAsync();
+
+        using var transaction = connection.BeginTransaction();
+        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction))
+        {
+            bulkCopy.DestinationTableName = "DapperBulkCopyInsert";
+
+            var table = new DataTable();
+            table.Columns.Add("id", typeof(System.Guid));
+            table.Columns.Add("Description", typeof(string));
+
+            for (int i = 0; i < 10; i++)
+            {
+                table.Rows.Add( System.Guid.NewGuid(), $"Test Desc {i}");
+            }
+
+            await bulkCopy.WriteToServerAsync(table);
+        }
+
+        transaction.Commit();
     }
 
-    [Benchmark]
-    public int CountFast()
-    {
-        using var connection = new SqlConnection("Server=127.0.0.1,1433;Database=TestDb;User Id=sa;Password=Password12345;TrustServerCertificate=True");
 
-        var rows = connection.Query("SELECT * FROM GuidTableFast").ToList();
-        return rows.Count();
-    }
 }
