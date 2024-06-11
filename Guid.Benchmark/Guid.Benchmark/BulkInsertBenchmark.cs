@@ -1,10 +1,7 @@
 ﻿using BenchmarkDotNet.Attributes;
 using Dapper;
-using MassTransit;
 using System.Data;
-using System.Data.Common;
 using System.Data.SqlClient;
-using System.Text;
 
 namespace Guid.Benchmark;
 
@@ -12,7 +9,7 @@ public class BulkInsertBenchmark
 {
     private const string ConnectionString = "Server=127.0.0.1,1433;Database=TestDb;User Id=sa;Password=Password12345;TrustServerCertificate=True";
 
-    [Params(1)]
+    [Params(1,10,100,1000)]
     public int NumberOfRow { get; set; }
 
     record Test(System.Guid id, string description);

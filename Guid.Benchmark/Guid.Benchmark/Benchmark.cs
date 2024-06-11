@@ -1,11 +1,4 @@
-﻿using BenchmarkDotNet.Attributes;
-using Dapper;
-using MassTransit;
-using System.Data;
-using System.Data.SqlClient;
-using System.Text;
-
-namespace Guid.Benchmark;
+﻿namespace Guid.Benchmark;
 
 public class Benchmark
 {
