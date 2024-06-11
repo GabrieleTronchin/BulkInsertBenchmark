@@ -12,94 +12,16 @@ public class Benchmark
 
     public async Task Execute()
     {
-       
-        await DapperCustomInsert();
 
-        await DapperBulkInsert();
+        var bInsert = new BulkInsertBenchmark();
 
-        await BulkCopyInsert();
+        await bInsert.DapperBulkInsert();
 
-    }
+        await bInsert.BulkCopyInsert();
 
-    // https://pritompurkayasta.medium.com/sql-bulk-insert-c-49f708148b5f
-
-    // https://timdeschryver.dev/blog/faster-sql-bulk-inserts-with-csharp#results
-
-    //    var cmdText = customers.Aggregate(
-    //    new StringBuilder(),
-    //    (sb, customer) => sb.AppendLine(@$"
-    //        insert into dbo.Customers (Id, FirstName, LastName, Street, City, State, PhoneNumber, EmailAddress)
-    //        values('{customer.Id}', '{customer.FirstName}', '{customer.LastName}', '{customer.Street}', '{customer.City}', '{customer.State}', '{customer.PhoneNumber}', '{customer.EmailAddress}')")
-    //);
+        await bInsert.BulkInsertTable();
 
 
-    [Benchmark]
-    public async Task DapperCustomInsert()
-    {
-        using var connection = new SqlConnection("Server=127.0.0.1,1433;Database=TestDb;User Id=sa;Password=Password12345;TrustServerCertificate=True");
-        for (int e = 0; e < 1; e++)
-        {
-
-            StringBuilder stringBuilder = new();
-
-            stringBuilder.AppendLine(@"INSERT INTO DapperCustomInsert (id, Description)
-                    VALUES ");
-
-            for (int i = 0; i < 10; i++)
-            {
-                stringBuilder.Append($"('{NewId.NextSequentialGuid()}', 'Test Desc {e + i}')");
-
-                if (i < 9) stringBuilder.Append(", ");
-            }
-            stringBuilder.Append(';');
-
-            await connection.ExecuteAsync(stringBuilder.ToString());
-
-            stringBuilder.Clear();
-        }
-
-    }
-
-    record Test(System.Guid id, string description);
-
-    [Benchmark]
-    public async Task DapperBulkInsert()
-    {
-        using var connection = new SqlConnection("Server=127.0.0.1,1433;Database=TestDb;User Id=sa;Password=Password12345;TrustServerCertificate=True");
-        var list2Insert = new List<Test>();
-
-        for (int i = 0; i < 10; i++)
-        {
-            list2Insert.Add(new Test(System.Guid.NewGuid(), $"Test Desc {i}"));
-        }
-
-        await connection.ExecuteAsync("INSERT INTO DapperBulkInsert (id, Description) VALUES (@id, @description)", list2Insert);
-    }
-
-    [Benchmark]
-    public async Task BulkCopyInsert()
-    {
-        using var connection = new SqlConnection("Server=127.0.0.1,1433;Database=TestDb;User Id=sa;Password=Password12345;TrustServerCertificate=True");
-        await connection.OpenAsync();
-
-        using var transaction = connection.BeginTransaction();
-        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction))
-        {
-            bulkCopy.DestinationTableName = "DapperBulkCopyInsert";
-
-            var table = new DataTable();
-            table.Columns.Add("id", typeof(System.Guid));
-            table.Columns.Add("Description", typeof(string));
-
-            for (int i = 0; i < 10; i++)
-            {
-                table.Rows.Add( System.Guid.NewGuid(), $"Test Desc {i}");
-            }
-
-            await bulkCopy.WriteToServerAsync(table);
-        }
-
-        transaction.Commit();
     }
 
 
