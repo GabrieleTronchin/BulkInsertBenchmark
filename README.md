@@ -9,8 +9,7 @@ This project focuses on three popular methods:
 
 Here are the results of my benchmark:
 
-[image](./assets/Banchmark.png)
-
+![image](./assets/Banchmark.png)
 
 - **Dapper Bulk Insert**: Simple and suitable for small to medium-sized datasets. Easy to use but may not be optimal for large volumes of data.
 
